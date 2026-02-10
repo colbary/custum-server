@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 PixelShare | Общий альбом скриншотов</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui; }
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            --radius: 16px;
+        }
+        
+        body.dark {
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --secondary: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        body {
+            background: var(--secondary);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 40px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        .logo-icon {
+            font-size: 36px;
+        }
+        
+        .theme-toggle {
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 50px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        /* Upload Section */
+        .upload-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow);
+            border: 2px dashed var(--border);
+            transition: border-color 0.3s;
+        }
+        
+        .upload-section.drag-over {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .upload-area {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .upload-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+        
+        .upload-text {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .upload-subtext {
+            color: var(--text-light);
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Description */
+        .description-box {
+            width: 100%;
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            background: var(--secondary);
+            border: 2px solid var(--border);
+            color: var(--text);
+            font-size: 16px;
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .description-box::placeholder {
+            color: var(--text-light);
+        }
+        
+        /* Gallery */
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 28px;
+            font-weight: 800;
+        }
+        
+        .refresh-btn {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+        
+        .image-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s;
+            border: 1px solid var(--border);
+        }
+        
+        .image-card:hover {
+            transform: translateY(-8px);
+        }
+        
+        .card-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .card-content {
+            padding: 20px;
+        }
+        
+        .card-description {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .action-btn:hover {
+            background: var(--secondary);
+        }
+        
+        .copy-btn:hover {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+        
+        .view-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 40px;
+            padding: 25px;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+        
+        .spinner {
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .upload-section { padding: 25px; }
+            .button-group { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .gallery { grid-template-columns: 1fr; }
+            .stats { flex-direction: column; gap: 20px; }
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card);
+            border-left: 4px solid var(--primary);
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .notification.success { border-color: #10b981; }
+        .notification.error { border-color: #ef4444; }
+        
+        .notification-icon {
+            font-size: 20px;
+        }
+        
+        .hidden { display: none; }
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">📱</span>
+                <span>PixelShare</span>
+            </div>
+            <button class="theme-toggle" id="themeToggle">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">Тёмная</span>
+            </button>
+        </header>
+        
+        <section class="upload-section" id="uploadSection">
+            <div class="upload-area">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Загрузи скриншот</div>
+                <div class="upload-subtext">Перетащи файл или выбери вручную. Видно всем.</div>
+                
+                <div class="button-group">
+                    <button class="btn" onclick="document.getElementById('fileInput').click()">
+                        <span>📎</span> Выбрать файл
+                    </button>
+                    <button class="btn btn-secondary" onclick="pasteFromClipboard()">
+                        <span>📋</span> Вставить из буфера
+                    </button>
+                </div>
+                
+                <input type="file" id="fileInput" accept="image/*,video/*">
+                
+                <textarea class="description-box" id="description" 
+                          placeholder="Добавь описание (необязательно)..."></textarea>
+                
+                <button class="btn" style="margin-top: 20px;" onclick="uploadFile()" id="uploadBtn">
+                    <span>🚀</span> Загрузить в общий альбом
+                </button>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalFiles">0</div>
+                        <div class="stat-label">Всего файлов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalSize">0 МБ</div>
+                        <div class="stat-label">Общий размер</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="onlineUsers">1</div>
+                        <div class="stat-label">Сейчас онлайн</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="gallery-section">
+            <div class="gallery-header">
+                <div class="section-title">🖼️ Общий альбом</div>
+                <button class="btn refresh-btn" onclick="loadGallery()" id="refreshBtn">
+                    <span>🔄</span> Обновить
+                </button>
+            </div>
+            
+            <div class="gallery" id="gallery">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    Загружаем галерею...
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <div id="notification" class="notification hidden"></div>
+
+    <script>
+        // ===== FIREBASE CONFIGURATION =====
+        // ⚠️ ЗАМЕНИ НА СВОИ КЛЮЧИ С FIREBASE
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const db = firebase.firestore();
+        
+        // ===== GLOBAL VARIABLES =====
+        let currentFile = null;
+        let statsListener = null;
+        
+        // ===== THEME TOGGLE =====
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark');
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Светлая';
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            if (document.body.classList.contains('dark')) {
+                localStorage.setItem('theme', 'dark');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Светлая';
+            } else {
+                localStorage.setItem('theme', 'light');
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Тёмная';
+            }
+        });
+        
+        // ===== DRAG & DROP =====
+        const uploadSection = document.getElementById('uploadSection');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, () => {
+                uploadSection.classList.add('drag-over');
+            }, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, () => {
+                uploadSection.classList.remove('drag-over');
+            }, false);
+        });
+        
+        uploadSection.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                currentFile = files[0];
+                showNotification(`Готов к загрузке: ${currentFile.name}`, 'success');
+            }
+        }, false);
+        
+        // ===== FILE SELECTION =====
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                currentFile = e.target.files[0];
+                showNotification(`Готов к загрузке: ${currentFile.name}`, 'success');
+            }
+        });
+        
+        // ===== PASTE FROM CLIPBOARD =====
+        async function pasteFromClipboard() {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const item of clipboardItems) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            const blob = await item.getType(type);
+                            currentFile = new File([blob], `pasted-${Date.now()}.png`, { type: blob.type });
+                            showNotification('Скриншот из буфера готов!', 'success');
+                            return;
+                        }
+                    }
+                }
+                showNotification('В буфере нет изображения', 'error');
+            } catch (err) {
+                showNotification('Не удалось получить доступ к буферу', 'error');
+            }
+        }
+        
+        // ===== UPLOAD TO FIREBASE =====
+        async function uploadFile() {
+            if (!currentFile) {
+                showNotification('Сначала выбери файл!', 'error');
+                return;
+            }
+            
+            const description = document.getElementById('description').value.trim() || 'Без описания';
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            // Блокируем кнопку на время загрузки
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span>⏳</span> Загружаем...';
+            
+            try {
+                // Генерируем уникальное имя
+                const fileExt = currentFile.name.split('.').pop();
+                const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+                const storageRef = storage.ref(`uploads/${fileName}`);
+                
+                // Загружаем файл
+                const snapshot = await storageRef.put(currentFile);
+                const downloadURL = await snapshot.ref.getDownloadURL();
+                
+                // Сохраняем метаданные в Firestore
+                await db.collection('screenshots').add({
+                    fileName: fileName,
+                    originalName: currentFile.name,
+                    downloadURL: downloadURL,
+                    description: description,
+                    size: currentFile.size,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    views: 0
+                });
+                
+                showNotification('✅ Файл загружен! Теперь его видят все.', 'success');
+                
+                // Очищаем форму
+                currentFile = null;
+                document.getElementById('description').value = '';
+                document.getElementById('fileInput').value = '';
+                
+                // Обновляем галерею
+                loadGallery();
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                showNotification('❌ Ошибка загрузки: ' + error.message, 'error');
+            } finally {
+                // Разблокируем кнопку
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<span>🚀</span> Загрузить в общий альбом';
+            }
+        }
+        
+        // ===== LOAD GALLERY =====
+        async function loadGallery() {
+            const gallery = document.getElementById('gallery');
+            const loading = document.getElementById('loading');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            gallery.innerHTML = '<div class="loading" id="loading"><div class="spinner"></div>Загружаем галерею...</div>';
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<span>⏳</span> Загрузка...';
+            
+            try {
+                // Получаем все скриншоты из Firestore
+                const snapshot = await db.collection('screenshots')
+                    .orderBy('timestamp', 'desc')
+                    .limit(50)
+                    .get();
+                
+                if (snapshot.empty) {
+                    gallery.innerHTML = `
+                        <div style="text-align: center; padding: 60px; color: var(--text-light);">
+                            <div style="font-size: 64px; margin-bottom: 20px;">📁</div>
+                            <h3>Альбом пуст</h3>
+                            <p>Будь первым, кто загрузит скриншот!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Очищаем галерею
+                gallery.innerHTML = '';
+                
+                // Добавляем каждый скриншот
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const date = new Date(data.timestamp?.toDate()).toLocaleString('ru-RU');
+                    
+                    const card = document.createElement('div');
+                    card.className = 'image-card';
+                    card.innerHTML = `
+                        <img src="${data.downloadURL}" alt="${data.description}" class="card-image" 
+                             onerror="this.src='https://via.placeholder.com/400x300/1e293b/94a3b8?text=Изображение+не+загружено'">
+                        <div class="card-content">
+                            <div class="card-description">${escapeHtml(data.description)}</div>
+                            <div class="card-meta">
+                                <span>📅 ${date}</span>
+                                <span>📏 ${formatBytes(data.size || 0)}</span>
+                            </div>
+                            <div class="card-actions">
+                                <button class="action-btn copy-btn" onclick="copyToClipboard('${data.downloadURL}')">
+                                    📋 Копировать ссылку
+                                </button>
+                                <button class="action-btn view-btn" onclick="window.open('${data.downloadURL}', '_blank')">
+                                    👁️ Открыть
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    gallery.appendChild(card);
+                });
+                
+            } catch (error) {
+                console.error('Load error:', error);
+                gallery.innerHTML = `
+                    <div style="text-align: center; padding: 60px; color: #ef4444;">
+                        <h3>Ошибка загрузки галереи</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<span>🔄</span> Обновить';
+            }
+        }
+        
+        // ===== REAL-TIME STATS =====
+        function setupStatsListener() {
+            // Общее количество файлов
+            db.collection('screenshots').onSnapshot((snapshot) => {
+                document.getElementById('totalFiles').textContent = snapshot.size;
+            });
+            
+            // Общий размер файлов
+            db.collection('screenshots').get().then((snapshot) => {
+                let totalSize = 0;
+                snapshot.forEach(doc => {
+                    totalSize += doc.data().size || 0;
+                });
+                document.getElementById('totalSize').textContent = formatBytes(totalSize);
+            });
+            
+            // "Онлайн" пользователи (просто счётчик)
+            const onlineRef = db.collection('stats').doc('online');
+            const userRef = onlineRef.collection('users').doc(Math.random().toString(36));
+            
+            // Отмечаем себя онлайн
+            userRef.set({
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // Слушаем других "онлайн" пользователей
+            onlineRef.collection('users')
+                .where('lastSeen', '>', new Date(Date.now() - 300000)) // 5 минут
+                .onSnapshot((snapshot) => {
+                    document.getElementById('onlineUsers').textContent = snapshot.size;
+                });
+            
+            // Обновляем свой статус каждую минуту
+            setInterval(() => {
+                userRef.update({
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }, 60000);
+            
+            // Убираем себя при закрытии страницы
+            window.addEventListener('beforeunload', () => {
+                userRef.delete();
+            });
+        }
+        
+        // ===== HELPER FUNCTIONS =====
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <span class="notification-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+                <span>${message}</span>
+            `;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
+        
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showNotification('✅ Ссылка скопирована в буфер!', 'success');
+            } catch (err) {
+                showNotification('❌ Не удалось скопировать', 'error');
+            }
+        }
+        
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Б';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // ===== INITIALIZATION =====
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGallery();
+            setupStatsListener();
+            
+            // Показываем уведомление о необходимости настроить Firebase
+            if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                showNotification('⚠️ Настрой Firebase для работы сайта. Инструкции ниже.', 'error');
+            }
+        });
+        
+        // Разрешаем вставку файлов на всю страницу
+        document.addEventListener('paste', (e) => {
+            for (const item of e.clipboardData.items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    currentFile = file;
+                    showNotification(`Готов к загрузке: ${file.name}`, 'success');
+                    break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
